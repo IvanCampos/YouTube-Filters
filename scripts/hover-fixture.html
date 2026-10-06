@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Hover playback verification</title>
+<link rel="stylesheet" href="/content.css">
+<style>
+body{background:#171717;color:#eee;font:15px system-ui;padding:24px}button,select{padding:9px;margin:4px}main{display:flex;flex-wrap:wrap;gap:20px}
+ytd-rich-item-renderer,ytd-video-preview,#movie_player{display:block;position:relative;width:250px}ytd-thumbnail{display:block;position:relative;height:140px;border-radius:12px;overflow:hidden;background:#458a95}
+a{color:inherit}ytd-thumbnail>a{display:block;height:100%}video{width:250px;height:140px}ytd-thumbnail video{position:absolute;inset:0}.sibling{position:absolute;top:0;left:0}h3{font-size:14px}
+table{margin:20px 0;border-collapse:collapse}td,th{text-align:left;padding:6px 18px;border-bottom:1px solid #555}
+</style>
+<script>
+const changes = new Set(), pendingResults = [];
+let resolved = false;
+const settings = {enabled:true,keywords:['spoiler'],aiEnabled:true,keyConfigured:true,aiRevision:'fixture',enabledClassifiers:['clickbait'],minProbability:.9,replacementStyle:'blur',keywordReplacementStyle:'grayscale'};
+const result = title => ({ok:true,aiRevision:'fixture',schemaVersion:5,results:{clickbait:{probability:title==='AI test'?.99:.01}}});
+window.chrome = {storage:{onChanged:{addListener:fn=>changes.add(fn),removeListener:fn=>changes.delete(fn)}},runtime:{sendMessage:async message=>message.type==='get-settings'?{ok:true,settings:{...settings}}:resolved?result(message.title):new Promise(resolve=>pendingResults.push(()=>resolve(result(message.title))))}};
+function configure(patch){Object.assign(settings,patch);for(const fn of changes)fn({publicSettings:{newValue:{...settings}}},'session');}
+</script>
+<!-- MOCK_PORT -->
+<script src="/classifiers.js" defer></script><script src="/keywords.js" defer></script><script src="/ai-overlay.js" defer></script><script src="/content.js" defer></script>
+</head><body>
+<h1>Hover playback verification</h1><p>Local canvas video, delayed simulated AI, production content scripts. No API calls or credentials.</p>
+<button id="start">Start / retry playback</button><button id="resolve">Resolve AI result</button><button id="late">Insert late preview</button><button id="reuse">Reuse detached preview for normal video</button>
+<button id="pause">Disable filtering</button><button id="enable">Enable filtering</button>
+<label>Classifier style <select id="style"><option value="blur">Blur</option><option value="solid">Solid</option><option value="grayscale">Grayscale</option><option value="placeholder">Placeholder</option><option value="hide">Hide card</option></select></label>
+<p>Link clicks: <span id="clicks">0</span> · Hover handlers: <span id="hovers">0</span></p>
+<table><thead><tr><th>Media</th><th>Playback</th><th>Suppressed</th></tr></thead><tbody id="status"></tbody></table>
+<main>
+<ytd-rich-item-renderer id="ai-card"><ytd-thumbnail><a href="https://www.youtube.com/watch?v=ai-test" aria-label="AI thumbnail"><video data-name="Inline AI" muted playsinline></video></a></ytd-thumbnail><video class="sibling" data-name="Sibling AI" muted playsinline></video><h3><a id="video-title" href="https://www.youtube.com/watch?v=ai-test">AI test</a></h3></ytd-rich-item-renderer>
+<ytd-rich-item-renderer><ytd-thumbnail><a href="https://www.youtube.com/watch?v=keyword-test" aria-label="Keyword thumbnail"><video data-name="Keyword" muted playsinline></video></a></ytd-thumbnail><h3><a id="video-title" href="https://www.youtube.com/watch?v=keyword-test">spoiler</a></h3></ytd-rich-item-renderer>
+<ytd-rich-item-renderer><ytd-thumbnail><a href="https://www.youtube.com/watch?v=normal-test" aria-label="Normal thumbnail"><video data-name="Normal" muted playsinline></video></a></ytd-thumbnail><h3><a id="video-title" href="https://www.youtube.com/watch?v=normal-test">calm</a></h3></ytd-rich-item-renderer>
+<ytd-video-preview><a href="https://www.youtube.com/watch?v=ai-test">Detached preview link</a><video data-name="Detached AI" muted playsinline></video></ytd-video-preview>
+<div id="movie_player"><video data-name="Main player" muted playsinline></video><p>Main player</p></div>
+</main>
+<script>
+const canvas=document.createElement('canvas');canvas.width=250;canvas.height=140;
+const context=canvas.getContext('2d');let frame=0;
+const draw=setInterval(()=>{context.fillStyle=frame++%2?'#df963b':'#39848e';context.fillRect(0,0,250,140);context.fillStyle='white';context.font='24px sans-serif';context.fillText('Frame '+frame,20,75);},100);
+const stream=canvas.captureStream(10);
+function report(){
+  const rows=[...document.querySelectorAll('video')].map(video=>`<tr><td>${video.dataset.name}</td><td>${video.paused?'paused':'playing'}</td><td>${video.hasAttribute('data-yt-preview-suppressed')?'yes':'no'}</td></tr>`).join('');
+  const output=document.querySelector('#status');if(output.innerHTML!==rows)output.innerHTML=rows;
+}
+function prepare(video){video.srcObject=stream;for(const type of ['play','playing','pause'])video.addEventListener(type,()=>requestAnimationFrame(report));}
+document.querySelectorAll('video').forEach(prepare);
+document.querySelector('#start').onclick=async()=>{await Promise.allSettled([...document.querySelectorAll('video')].map(video=>video.play()));report();};
+document.querySelector('#resolve').onclick=()=>{resolved=true;pendingResults.splice(0).forEach(resolve=>resolve());};
+document.querySelector('#late').onclick=()=>{if(document.querySelector('[data-name="Late AI"]'))return;const video=document.createElement('video');video.dataset.name='Late AI';video.muted=true;video.playsInline=true;document.querySelector('#ai-card').append(video);prepare(video);video.play().catch(()=>{});};
+document.querySelector('#reuse').onclick=()=>{const host=document.querySelector('ytd-video-preview');host.querySelector('a').href='https://www.youtube.com/watch?v=normal-test';host.querySelector('video').play().catch(()=>{});};
+document.querySelector('#pause').onclick=()=>configure({enabled:false});document.querySelector('#enable').onclick=()=>configure({enabled:true});
+document.querySelector('#style').onchange=event=>configure({replacementStyle:event.target.value});
+document.querySelectorAll('main a').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();document.querySelector('#clicks').textContent=Number(document.querySelector('#clicks').textContent)+1;}));
+window.addEventListener('load',()=>document.querySelectorAll('ytd-thumbnail').forEach(thumbnail=>thumbnail.addEventListener('mouseover',()=>{document.querySelector('#hovers').textContent=Number(document.querySelector('#hovers').textContent)+1;thumbnail.querySelector('video').play().catch(()=>{});})));
+const reports=setInterval(report,200);report();window.addEventListener('pagehide',()=>{clearInterval(draw);clearInterval(reports);stream.getTracks().forEach(track=>track.stop());});
+</script></body></html>

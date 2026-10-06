@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>Offline thumbnail processing verification</title><style>body{font:16px system-ui;padding:24px;background:#141414;color:#eee}td,th{padding:8px;text-align:left}table{border-collapse:collapse}td{border-top:1px solid #444}img{max-width:400px}pre{white-space:pre-wrap}</style><h1>Offline thumbnail processing verification</h1><p>Production image preparation on the three supplied screenshots. No OpenAI calls or API keys.</p><table><thead><tr><th>Example</th><th>Format</th><th>Profile</th><th>Input</th><th>Output</th><th>Content fingerprint</th></tr></thead><tbody id="results"></tbody></table><p id="status">Running…</p><script src="/thumbnail-images.js"></script><script>
+const fixtures=["/probe-image-1.png", "/probe-image-2.png", "/probe-image-3.png"];
+(async()=>{let count=0;for(let i=0;i<fixtures.length;i++) {
+const original=await(await fetch(fixtures[i])).blob();
+const bitmap=await createImageBitmap(original);
+const canvas=new OffscreenCanvas(bitmap.width,bitmap.height);canvas.getContext('2d').drawImage(bitmap,0,0);
+for(const mime of ['image/png','image/jpeg','image/webp']) {
+const blob=mime==='image/png'?original:await canvas.convertToBlob({type:mime,quality:.9});
+let previous;
+for(const size of ['original','768','512']) {
+const value=await ThumbnailImages.prepare('https://i.ytimg.com/vi/probe/hqdefault.jpg',undefined,async()=>new Response(blob,{headers:{'content-type':blob.type}}),window,size);
+const out=await createImageBitmap(await(await fetch(value.dataURL)).blob());
+const cap=size==='original'?Infinity:Number(size);
+if(Math.max(out.width,out.height)>cap || out.width>bitmap.width || out.height>bitmap.height || (previous && previous!==value.pixelHash))throw Error('Dimensions or fingerprints inconsistent');
+previous=value.pixelHash;
+const row=document.createElement('tr');for(const text of [i+1,mime,size,`${bitmap.width}×${bitmap.height}`,`${out.width}×${out.height}`,value.pixelHash.slice(0,16)+'…']){const cell=document.createElement('td');cell.textContent=text;row.append(cell)}document.getElementById('results').append(row);out.close();count++;
+}}
+bitmap.close();canvas.width=canvas.height=1;
+}document.getElementById('status').textContent=`PASS — ${count} native decode, resize, and fingerprint checks. No API calls.`;
+})().catch(error=>document.getElementById('status').textContent='FAIL — '+error.message);
+</script>

@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Thumbnail Filters \u2014 Decisions",
+  "version": "1.1.0",
+  "description": "Filter YouTube videos with keywords, 21 title categories, and an optional wide-open-mouth thumbnail check using OpenAI Decisions.",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://*.ytimg.com/*",
+    "https://img.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Thumbnail Filters \u2014 keywords, AI, and colors",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://youtube.com/*",
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "classifiers.js",
+        "thumbnail-images.js",
+        "keywords.js",
+        "ai-overlay.js",
+        "pattern-observer.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

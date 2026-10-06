@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thumbnail Filters — Decisions</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="classifiers.js" defer></script>
+  <script src="keywords.js" defer></script>
+  <script src="spending.js" defer></script>
+  <script src="analytics.js" defer></script>
+  <script src="pattern-ui.js" defer></script>
+  <script src="popup.js" defer></script>
+</head>
+<body>
+<main>
+<form id="settings-form" novalidate>
+<fieldset id="controls" disabled>
+<div class="popup-shell">
+  <header>
+    <div class="header-line">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">▶</span><h1>Thumbnail Filters</h1></div>
+      <label class="theme-control" for="popup-theme"><span class="sr-only">Appearance</span><select id="popup-theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </div>
+    <label class="toggle-row master-toggle" for="enabled"><span><strong>Filtering</strong><small id="filter-state">Loading settings…</small></span><input id="enabled" type="checkbox" role="switch" aria-describedby="filter-state"></label>
+  </header>
+  <div class="settings-tabs" role="tablist" aria-label="Filter settings">
+    <button id="keywords-tab" type="button" role="tab" aria-selected="true" aria-controls="keywords-panel">Keywords <span class="draft-dot" hidden aria-hidden="true"></span></button>
+    <button id="classifiers-tab" type="button" role="tab" aria-selected="false" aria-controls="classifiers-panel" tabindex="-1">Classifiers <span class="draft-dot" hidden aria-hidden="true"></span></button>
+    <button id="analytics-tab" type="button" role="tab" aria-selected="false" aria-controls="analytics-panel" tabindex="-1">Analytics</button>
+  </div>
+  <div class="panel-scroll" id="panel-scroll">
+    <section id="keywords-panel" role="tabpanel" aria-labelledby="keywords-tab">
+      <div class="section-heading"><h2>Your keywords <span id="keyword-count">0 keywords</span></h2><button id="keyword-mode" class="text-button" type="button" aria-pressed="false">Edit as text</button></div>
+      <div id="keyword-chip-editor">
+        <div id="keyword-chips" class="keyword-chips" aria-label="Saved and draft keywords"></div>
+        <div class="add-keyword"><label class="sr-only" for="keyword-add">Add a keyword or phrase</label><input id="keyword-add" type="text" placeholder="Add a word or phrase" spellcheck="false" aria-describedby="keyword-help"><button id="keyword-add-button" type="button" class="secondary">Add</button></div>
+      </div>
+      <div id="keyword-text-editor" hidden><label class="sr-only" for="keywords">Keywords, one per line</label><textarea id="keywords" rows="5" spellcheck="false" placeholder="spoiler&#10;reaction&#10;watch until the end" aria-describedby="keyword-help"></textarea></div>
+      <p id="keyword-help" class="hint">Whole words and phrases, regardless of capitalization. MAGA matches “MAGA news”, not “Magazine”. Paste multiple lines to add a list.</p>
+      <div id="keyword-replacement-style" class="replacement-control"></div>
+      <div id="keyword-color-row" class="color-setting"><label for="keyword-color">Thumbnail color</label><input id="keyword-color" type="color" value="#ff0000"></div>
+    </section>
+    <section id="classifiers-panel" role="tabpanel" aria-labelledby="classifiers-tab" hidden>
+      <label class="toggle-row ai-toggle" for="ai-enabled"><span><strong>Classify with OpenAI Decisions</strong><small>Check titles and selected thumbnail features</small></span><input id="ai-enabled" type="checkbox" role="switch" aria-describedby="ai-help"></label>
+      <div id="replacement-style" class="replacement-control"></div>
+      <div id="ai-color-row" class="color-setting"><label for="ai-color">Thumbnail color</label><input id="ai-color" type="color" value="#8000ff"></div>
+      <section class="section-block" aria-labelledby="categories-heading"><h2 id="categories-heading">Categories to filter</h2>
+        <label for="category-preset">Quick selection</label><select id="category-preset"><option value="custom">Custom</option><option value="focused">Focused</option><option value="mouth">Mouth only</option><option value="titles">All title categories</option></select>
+        <div id="classifier-list"></div><p class="hint">Each category is evaluated independently. Selecting none pauses automatic AI requests. More categories may increase API usage.</p></section>
+      <details class="section-block cost-controls"><summary>API cost controls</summary>
+        <label class="toggle-row" for="hide-early-exit"><span><strong>Skip thumbnails after a title match</strong><small>Applies to Hide entire video. Skipped categories are excluded from evaluated counts.</small></span><input id="hide-early-exit" type="checkbox" checked></label>
+        <div class="quality-setting"><label for="image-size">Thumbnail size</label><select id="image-size"><option value="original">Original</option><option value="768">768 px maximum edge</option><option value="512">512 px maximum edge</option></select></div>
+        <div class="quality-setting"><label for="image-detail">Image detail</label><select id="image-detail"><option value="high">High</option><option value="low">Low</option><option value="auto">Auto</option></select></div>
+        <p class="hint">Smaller images may miss small faces. Lower detail may not reduce charges. Defaults remain Original and High pending live accuracy and cost validation.</p>
+      </details>
+      <section class="section-block" aria-labelledby="threshold-heading"><h2 id="threshold-heading">Minimum match probability</h2>
+        <div class="threshold"><label for="min-probability">Probability</label><div class="percent-input"><input id="min-probability" type="number" min="0" max="100" step="1" value="90" aria-describedby="threshold-help"><span aria-hidden="true">%</span></div><input id="probability-slider" type="range" min="0" max="100" step="1" value="90" aria-label="Minimum probability" aria-describedby="threshold-help"></div>
+        <p id="threshold-help" class="hint">Filter when the match probability reaches this minimum. Default: 90%. At 0%, every evaluated video qualifies. Keywords are unaffected.</p>
+      </section>
+      <details id="api-settings" class="connection"><summary><span><strong>OpenAI Decisions connection</strong><small id="connection-state">No key saved</small></span><span class="disclosure" aria-hidden="true">⌄</span></summary>
+        <div class="connection-body">
+          <div class="key-actions"><button id="test-key" class="secondary" type="button">Test saved key</button><button id="replace-key" class="text-button" type="button">Replace key</button><button id="remove-key" class="text-button danger" type="button">Remove key</button></div>
+          <div id="key-entry"><label for="api-key">Your OpenAI API key</label><input id="api-key" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Paste your API key" aria-describedby="key-help"><p id="key-help" class="hint"></p><a id="get-key" href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">Get a key from OpenAI Decisions ↗</a></div>
+          <p id="cache-status" role="status" aria-live="polite" hidden></p>
+          <p id="ai-status" role="status" aria-live="polite"></p>
+        </div>
+      </details>
+      <p id="ai-help" class="hint">AI checks videos visible for 300 ms in your active tab. Selecting Wide-open mouth also sends thumbnail images and may increase charges. Keyword matches take priority. Save to apply AI changes.</p>
+    </section>
+    <section id="analytics-panel" role="tabpanel" aria-labelledby="analytics-tab" hidden>
+      <div class="section-heading"><h2>Estimated API spend</h2><span class="analytics-currency">USD</span></div>
+      <p class="hint">OpenAI Decisions requests from this extension, including key tests. Thumbnail downloads add no API spend.</p>
+      <p id="analytics-warning" class="analytics-warning" role="status" aria-live="polite" hidden></p>
+      <div id="spend-grid" class="spend-grid">
+        <div class="spend-card"><h3>Today</h3><strong id="spend-today">—</strong><span id="spend-today-note"></span></div>
+        <div class="spend-card"><h3>This week</h3><strong id="spend-week">—</strong><span id="spend-week-note"></span></div>
+        <div class="spend-card"><h3>This month</h3><strong id="spend-month">—</strong><span id="spend-month-note"></span></div>
+        <div class="spend-card"><h3>All time</h3><strong id="spend-all">—</strong><span id="spend-all-note"></span></div>
+      </div>
+      <p id="analytics-status" class="hint" role="status" aria-live="polite">Open Analytics to load spending.</p>
+      <details class="analytics-details"><summary>Requests and tokens</summary><div id="analytics-period-details"></div></details>
+      <details class="analytics-details"><summary>Pricing and tracking</summary>
+        <p id="analytics-start" class="hint"></p><p id="analytics-zone" class="hint"></p>
+        <p class="hint">Weeks start Monday. Requests belong to their start date.</p>
+        <p class="hint">Decisions with GPT-6 Luna: $0.10 per million input tokens; $0.20 above 272,000 input tokens per request. No cache-read, cache-write, or output-token charges. Pricing checked October 6, 2026. Unknown model prices are marked unpriced.</p>
+        <a href="https://developers.openai.com/api/docs/guides/decisions" target="_blank" rel="noreferrer">Decisions pricing ↗</a>
+        <div id="analytics-rates" class="hint"></div>
+        <p class="hint">Estimates use reported tokens and the recorded rate, excluding credits, discounts, taxes, and other apps. Interrupted requests may have incurred charges. Previous usage cannot be reconstructed.</p>
+        <p class="hint">History stays on this browser, including after key changes. Removing the extension deletes it.</p>
+      </details>
+      <section class="pattern-section" aria-labelledby="patterns-heading">
+        <div class="section-heading"><h2 id="patterns-heading">Filtering patterns</h2><label class="sr-only" for="pattern-period">Pattern period</label><select id="pattern-period"><option value="today">Today</option><option value="week" selected>This week</option><option value="month">This month</option><option value="30days">Last 30 days</option></select></div>
+        <p id="pattern-status" class="hint" role="status" aria-live="polite">Open Analytics to load patterns.</p>
+        <p id="pattern-warning" class="analytics-warning" role="status" hidden></p>
+        <div class="pattern-rate"><strong id="pattern-rate">—</strong><span id="pattern-rate-caption">Filtering rate</span></div>
+        <p id="pattern-outcomes" class="hint"></p>
+        <details class="analytics-details"><summary>What these numbers mean</summary>
+          <p class="hint">Distinct videos entering the viewport while filtering is on. The latest observed outcome for each video in the selected period wins, across tabs and repeat appearances. Cached matches count; API calls are separate.</p>
+          <p class="hint">Keyword matches skip AI. Pending, unavailable and AI-not-evaluated videos stay in the filtering-rate denominator. Videos without an identifiable video link are excluded.</p>
+          <p id="pattern-retention" class="hint"></p>
+        </details>
+        <h3>Top matching keywords</h3>
+        <p class="hint">Every matching keyword counts. Shares of keyword-filtered videos can overlap.</p>
+        <div id="pattern-keywords" class="pattern-table-scroll"></div>
+        <h3>Top AI categories</h3>
+        <p class="hint">Qualified = reached the probability threshold. Shown = displayed reason. Rate = qualified ÷ evaluated for that category.</p>
+        <div id="pattern-categories" class="pattern-table-scroll"></div>
+        <h3>Pattern trends</h3>
+        <div class="pattern-trend-controls"><label for="pattern-metric">Pattern<select id="pattern-metric"><option value="overall">Overall filtering</option></select></label><label for="pattern-mode">Chart<select id="pattern-mode"><option value="rate">Match rate</option><option value="count">Match count</option></select></label></div>
+        <p id="pattern-chart-scale" class="hint"></p>
+        <div id="pattern-chart" class="pattern-chart" role="img" aria-label="Daily pattern trends"></div>
+        <div id="pattern-chart-dates" class="pattern-chart-dates"></div>
+        <p class="hint">Dots mark rule changes. Today is partial. Daily counts may include a video again on a different day.</p>
+        <p id="pattern-comparison" class="hint"></p>
+        <details class="analytics-details"><summary>Daily counts, rates and rule changes</summary><div id="pattern-daily" class="pattern-table-scroll"></div></details>
+      </section>
+    </section>
+  </div>
+  <footer class="save-footer">
+    <p id="status" role="status" aria-live="polite">Loading settings…</p>
+    <div class="save-actions"><button id="discard" type="button" class="secondary" disabled>Discard changes</button><button id="save" type="submit" disabled>Save all settings</button></div>
+    <p class="privacy">Settings stay local · AI sends titles and selected thumbnail images</p>
+  </footer>
+</div>
+</fieldset>
+</form>
+</main>
+</body>
+</html>
