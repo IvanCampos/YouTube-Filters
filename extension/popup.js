@@ -83,6 +83,7 @@
 
   const groups = [
     ["Thumbnail images", ["wide_open_mouth"]],
+    ["AI Brushed Images", ["brush_lettering_only", "brush_background_only"]],
     ["Attention and engagement", ["clickbait", "engagement_bait", "artificial_urgency"]],
     ["Emotional manipulation", ["fear_mongering", "rage_bait", "divisive_framing", "conspiracy_framing", "harassment_pranks"]],
     ["Drama and gossip", ["personal_drama", "celebrity_gossip"]],

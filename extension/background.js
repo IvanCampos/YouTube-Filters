@@ -204,20 +204,20 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
       await spending.complete(attemptId);
     }
   }
-  const jobIds = job => enabledIds().filter(id => id !== classifiers.imageId || job.thumbnailUrl);
+  const jobIds = job => enabledIds().filter(id => !classifiers.isImage(id) || job.thumbnailUrl);
   const earlyMode = () => settings.hideEarlyExit !== false && RedThumbnailKeywords.cleanStyle(settings.replacementStyle) === "hide";
   function readJobCache(job, ids = jobIds(job)) {
     const results = {}, missing = []; let expires = Infinity;
     for (const id of ids) {
-      const hit = id === classifiers.imageId && job.imageExpires <= Date.now() ? { missing: [id] } : cache.read(id === classifiers.imageId ? job.imageKey : job.titleKey, [id]);
+      const hit = classifiers.isImage(id) && job.imageExpires <= Date.now() ? { missing: [id] } : cache.read(classifiers.isImage(id) ? job.imageKey : job.titleKey, [id]);
       if (hit.missing.length) missing.push(id);
       else { results[id] = hit.results[id]; expires = Math.min(expires, hit.expires); }
     }
-    if (ids.includes(classifiers.imageId) && job.imageKey) expires = Math.min(expires, job.imageExpires || 0);
+    if (ids.some(classifiers.isImage) && job.imageKey) expires = Math.min(expires, job.imageExpires || 0);
     return { results, missing, expires: Number.isFinite(expires) ? expires : 0 };
   }
   function deliverCached(job) {
-    const ids = jobIds(job), titles = ids.filter(id => id !== classifiers.imageId);
+    const ids = jobIds(job), titles = ids.filter(id => !classifiers.isImage(id));
     const hit = readJobCache(job), titleHit = readJobCache(job, titles);
     const skip = earlyMode() && titles.length && !titleHit.missing.length && classifiers.strongest({ schemaVersion: classifiers.schemaVersion, results: titleHit.results }, titles, publicSettings().minProbability);
     const chosen = skip ? titleHit : hit;
@@ -241,7 +241,8 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
     return needed;
   }
   async function getImage(job, needed) {
-    if (job.imageExpires > Date.now() && job.imageKey && !cache.read(job.imageKey, [classifiers.imageId]).missing.length) return;
+    const images = jobIds(job).filter(classifiers.isImage);
+    if (job.imageExpires > Date.now() && job.imageKey && !cache.read(job.imageKey, images).missing.length) return;
     const key = `${job.epoch}:${job.urlKey}`;
     let preparation = preparations.get(key);
     if (!preparation) {
@@ -275,7 +276,7 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
   async function evaluate(job, ids, needed) {
     const items = [];
     for (const id of readJobCache(job, ids).missing) {
-      const evidence = id === classifiers.imageId ? job.imageKey : job.titleKey;
+      const evidence = classifiers.isImage(id) ? job.imageKey : job.titleKey;
       const failureKey = await hash(`${evidence}:${id}:${cache.fingerprints[id]}`);
       const key = `${job.epoch}:${failureKey}`;
       const failure = cache.failure(failureKey);
@@ -287,7 +288,7 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
       // Cache writes can finish while hashing, preparing images, or waiting for
       // an API slot. Recheck at dispatch so reservations never repay that work.
       for (const item of owned) {
-        const hit = cache.read(item.id === classifiers.imageId ? job.imageKey : job.titleKey, [item.id]);
+        const hit = cache.read(classifiers.isImage(item.id) ? job.imageKey : job.titleKey, [item.id]);
         const failure = cache.failure(item.failureKey);
         if (!hit.missing.length) responses[item.id] = { ok: true };
         else if (failure?.retryAt > Date.now()) responses[item.id] = { ok: false, ...failure };
@@ -296,11 +297,11 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
       if (!fresh.length) return responses;
       const requested = fresh.map(item => item.id);
       relevant.ids = ids => ids.filter(id => owned.some(item => item.id === id && [...item.reservation.interests].some(check => check())));
-      const result = await callApi(requested.every(id => id === classifiers.imageId) ? "Evaluate the thumbnail." : job.title, requested, job.epoch, false, relevant, job.imageData, classifiers.cleanImageDetail(settings.imageDetail));
+      const result = await callApi(requested.every(classifiers.isImage) ? "Evaluate the thumbnail." : job.title, requested, job.epoch, false, relevant, job.imageData, classifiers.cleanImageDetail(settings.imageDetail));
       if (job.epoch !== credentialGeneration) return Object.fromEntries(owned.map(item => [item.id, { ok: false, code: "changed" }]));
       for (const item of fresh) {
         if (result.ok && result.results[item.id]) {
-          cache.merge(item.id === classifiers.imageId ? job.imageKey : job.titleKey,
+          cache.merge(classifiers.isImage(item.id) ? job.imageKey : job.titleKey,
             { schemaVersion: classifiers.schemaVersion, results: { [item.id]: result.results[item.id] } }, [item.id]);
           cache.failures.delete(item.failureKey); responses[item.id] = { ok: true };
         } else if (result.ok && result.unresolved[item.id]) responses[item.id] = { ok: false, ...cache.fail(item.failureKey, result.unresolved[item.id].code), error: "Some selected categories could not be evaluated. Cached answers will be reused." };
@@ -318,14 +319,14 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
     deliverCached(job);
     const needed = interest(job);
     if (!needed() || !await needed.verify()) return;
-    const ids = jobIds(job), titles = ids.filter(id => id !== classifiers.imageId);
+    const ids = jobIds(job), titles = ids.filter(id => !classifiers.isImage(id));
     let outcome = { ok: true };
     if (earlyMode() && titles.length) {
       outcome = await evaluate(job, titles, needed);
       deliverCached(job);
       if (!needed()) return;
     }
-    if (outcome.ok && ids.includes(classifiers.imageId)) {
+    if (outcome.ok && ids.some(classifiers.isImage)) {
       try { await getImage(job, needed); }
       catch (error) { outcome = { ok: false, code: error.code, error: error.message, retryAt: error.retryAt }; }
     }
@@ -372,11 +373,11 @@ importScripts("classifiers.js", "decisions.js", "thumbnail-images.js", "keywords
     if (sub.revision !== revision) { finish(sub, { ok: false, code: "changed" }); return; }
     if (!eligible(sub)) { finish(sub, { ok: false, code: "disabled" }); return; }
     const epoch = credentialGeneration;
-    const thumbnailUrl = enabledIds().includes(classifiers.imageId) ? ThumbnailImages.cleanURL(message.thumbnailUrl) : null;
-    if (message.thumbnailUrl != null && enabledIds().includes(classifiers.imageId) && !thumbnailUrl) {
+    const thumbnailUrl = enabledIds().some(classifiers.isImage) ? ThumbnailImages.cleanURL(message.thumbnailUrl) : null;
+    if (message.thumbnailUrl != null && enabledIds().some(classifiers.isImage) && !thumbnailUrl) {
       finish(sub, { ok: false, code: "thumbnail", retryAt: Date.now() + 60000 }); return;
     }
-    if (!thumbnailUrl && !enabledIds().some(id => id !== classifiers.imageId)) {
+    if (!thumbnailUrl && !enabledIds().some(id => !classifiers.isImage(id))) {
       finish(sub, { ok: false, code: "thumbnail", retryAt: Date.now() + 60000 }); return;
     }
     const titleKey = await hash(sub.title);

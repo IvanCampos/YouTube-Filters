@@ -165,12 +165,13 @@ test("popup displays and saves new defaults without overwriting existing prefere
   }
 });
 
-test("all 21 categories default on and category drafts survive tab switches until saved", async (t) => {
+test("all 21 title categories default on, image categories are opt-in, and drafts survive tab switches until saved", async (t) => {
   const { document, window, storage } = await popupFixture(t, { keywordReplacementStyle: "grayscale", minProbability: 0.7, minConfidence: 0.6 });
   const inputs = [...document.querySelectorAll('#classifier-list input')];
-  assert.equal(inputs.length, 22);
-  assert.ok(inputs.filter(input => input.value !== "wide_open_mouth").every(input => input.checked));
-  assert.equal(inputs.find(input => input.value === "wide_open_mouth").checked, false);
+  assert.equal(inputs.length, 24);
+  const imageIds = ["wide_open_mouth", "brush_lettering_only", "brush_background_only"];
+  assert.ok(inputs.filter(input => !imageIds.includes(input.value)).every(input => input.checked));
+  assert.ok(inputs.filter(input => imageIds.includes(input.value)).every(input => !input.checked));
   document.querySelector('#classifiers-tab').click();
   for (const input of inputs) input.checked = ["rage_bait", "miracle_cure"].includes(input.value);
   inputs[0].dispatchEvent(new window.Event('change'));

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube Thumbnail Filters \u2014 Decisions",
   "version": "1.1.0",
-  "description": "Filter YouTube videos with keywords, 21 title categories, and an optional wide-open-mouth thumbnail check using OpenAI Decisions.",
+  "description": "Filter YouTube videos with keywords, title categories, and optional mouth and brush-style thumbnail checks using OpenAI Decisions.",
   "minimum_chrome_version": "111",
   "permissions": [
     "storage"

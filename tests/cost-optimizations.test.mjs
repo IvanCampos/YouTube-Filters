@@ -66,10 +66,12 @@ test('a later interested job retains a shared question when its first owner canc
 });
 
 test('hide-mode title match skips downloads and reports only evaluated categories', async () => {
-  const w = worker(async (src, options) => { assert.equal(src, endpoint); return decision(options, .99); }, { enabledClassifiers: ['clickbait', 'wide_open_mouth'], replacementStyle: 'hide' });
+  const images = Array.from(catalog.imageIds);
+  const w = worker(async (src, options) => { assert.equal(src, endpoint); return decision(options, .99); }, { enabledClassifiers: ['clickbait', ...images], replacementStyle: 'hide' });
   const result = await w.classify('Title match', { thumbnailUrl: url(1) });
-  assert.deepEqual(result.evaluatedIds, ['clickbait']); assert.deepEqual(result.skippedIds, ['wide_open_mouth']);
-  assert.equal(result.results.wide_open_mouth, undefined); assert.equal(w.calls.length, 1);
+  assert.deepEqual(result.evaluatedIds, ['clickbait']); assert.deepEqual(result.skippedIds, images);
+  for (const id of images) assert.equal(result.results[id], undefined);
+  assert.equal(w.calls.length, 1);
   await w.chrome.storage.local.set({ minProbability: 1 });
   // The title is cached, but the changed threshold now needs the image.
   w.calls.length = 0;
@@ -147,9 +149,10 @@ test('hidden tabs and short visibility never subscribe; visible dwell is continu
   await new Promise(r => setTimeout(r, 450)); assert.equal(page.requests.length, 1);
 });
 
-test('early-exit page results exclude skipped mouth from analytics and cannot survive a change to blur', async t => {
+test('early-exit page results exclude all skipped image categories from analytics and cannot survive a change to blur', async t => {
   let complete = false;
-  const page = await contentFixture(t, card('a', 'Title'), { aiEnabled: true, keyConfigured: true, enabledClassifiers: ['clickbait', 'wide_open_mouth'], replacementStyle: 'hide', patternVersion: 1 }, async message => ({ ok: true, schemaVersion: catalog.schemaVersion, results: complete ? { clickbait: { probability: .99 }, wide_open_mouth: { probability: .01 } } : { clickbait: { probability: .99 } }, evaluatedIds: complete ? ['clickbait', 'wide_open_mouth'] : ['clickbait'], skippedIds: complete ? [] : ['wide_open_mouth'] }));
+  const images = Array.from(catalog.imageIds), ids = ['clickbait', ...images];
+  const page = await contentFixture(t, card('a', 'Title'), { aiEnabled: true, keyConfigured: true, enabledClassifiers: ids, replacementStyle: 'hide', patternVersion: 1 }, async () => ({ ok: true, schemaVersion: catalog.schemaVersion, results: { clickbait: { probability: .99 }, ...Object.fromEntries(complete ? images.map(id => [id, { probability: .01 }]) : []) }, evaluatedIds: complete ? ids : ['clickbait'], skippedIds: complete ? [] : images }));
   await until(() => page.document.querySelector('[data-yt-hide-card]'));
   assert.ok(page.document.querySelector('[data-yt-hide-card]'));
   await new Promise(r => setTimeout(r, 700));

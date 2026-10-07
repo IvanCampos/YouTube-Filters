@@ -46,13 +46,13 @@
       <div id="replacement-style" class="replacement-control"></div>
       <div id="ai-color-row" class="color-setting"><label for="ai-color">Thumbnail color</label><input id="ai-color" type="color" value="#8000ff"></div>
       <section class="section-block" aria-labelledby="categories-heading"><h2 id="categories-heading">Categories to filter</h2>
-        <label for="category-preset">Quick selection</label><select id="category-preset"><option value="custom">Custom</option><option value="focused">Focused</option><option value="mouth">Mouth only</option><option value="titles">All title categories</option></select>
-        <div id="classifier-list"></div><p class="hint">Each category is evaluated independently. Selecting none pauses automatic AI requests. More categories may increase API usage.</p></section>
+        <label for="category-preset">Quick selection</label><select id="category-preset"><option value="custom">Custom</option><option value="focused">Focused</option><option value="mouth">Mouth only</option><option value="brushed">AI Brushed Images</option><option value="titles">All title categories</option></select>
+        <div id="classifier-list"></div><p class="hint">Each category is evaluated independently. A match in any selected category triggers filtering. AI Brushed Images checks visible brush styling. Selecting none pauses automatic AI requests. More categories may increase API usage.</p></section>
       <details class="section-block cost-controls"><summary>API cost controls</summary>
         <label class="toggle-row" for="hide-early-exit"><span><strong>Skip thumbnails after a title match</strong><small>Applies to Hide entire video. Skipped categories are excluded from evaluated counts.</small></span><input id="hide-early-exit" type="checkbox" checked></label>
         <div class="quality-setting"><label for="image-size">Thumbnail size</label><select id="image-size"><option value="original">Original</option><option value="768">768 px maximum edge</option><option value="512">512 px maximum edge</option></select></div>
         <div class="quality-setting"><label for="image-detail">Image detail</label><select id="image-detail"><option value="high">High</option><option value="low">Low</option><option value="auto">Auto</option></select></div>
-        <p class="hint">Smaller images may miss small faces. Lower detail may not reduce charges. Defaults remain Original and High pending live accuracy and cost validation.</p>
+        <p class="hint">Smaller images may miss small faces or fine brush strokes. Lower detail may not reduce charges. Defaults remain Original and High pending live accuracy and cost validation.</p>
       </details>
       <section class="section-block" aria-labelledby="threshold-heading"><h2 id="threshold-heading">Minimum match probability</h2>
         <div class="threshold"><label for="min-probability">Probability</label><div class="percent-input"><input id="min-probability" type="number" min="0" max="100" step="1" value="90" aria-describedby="threshold-help"><span aria-hidden="true">%</span></div><input id="probability-slider" type="range" min="0" max="100" step="1" value="90" aria-label="Minimum probability" aria-describedby="threshold-help"></div>
@@ -66,7 +66,7 @@
           <p id="ai-status" role="status" aria-live="polite"></p>
         </div>
       </details>
-      <p id="ai-help" class="hint">AI checks videos visible for 300 ms in your active tab. Selecting Wide-open mouth also sends thumbnail images and may increase charges. Keyword matches take priority. Save to apply AI changes.</p>
+      <p id="ai-help" class="hint">AI checks videos visible for 300 ms in your active tab. Selecting Wide-open mouth or either AI Brushed Images category also sends thumbnail images and may increase charges. Keyword matches take priority. Save to apply AI changes.</p>
     </section>
     <section id="analytics-panel" role="tabpanel" aria-labelledby="analytics-tab" hidden>
       <div class="section-heading"><h2>Estimated API spend</h2><span class="analytics-currency">USD</span></div>

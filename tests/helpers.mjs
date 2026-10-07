@@ -76,7 +76,7 @@ export async function contentFixture(t, html, settings = { keywords: ["spoiler"]
     if (message.type === "get-settings") return { ok: true, settings: storage.publicSettings() };
     if (message.type === "record-patterns") { observations.push(message); return { ok: true }; }
     requests.push(message);
-    const requested = storage.publicSettings().enabledClassifiers.filter(id => id !== classifiers.imageId || message.thumbnailUrl);
+    const requested = storage.publicSettings().enabledClassifiers.filter(id => !classifiers.isImage(id) || message.thumbnailUrl);
     const result = await classifier(message);
     // Shorthand for existing single-match fixtures; production receives only the new envelope.
     const envelope = Object.hasOwn(result, "label") ? classification(result.label, {

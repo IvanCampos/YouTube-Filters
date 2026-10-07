@@ -5,7 +5,7 @@ import { classifiers, classification } from "./helpers.mjs";
 const expected = ["clickbait", "fear_mongering", "rage_bait", "divisive_framing", "personal_drama", "celebrity_gossip", "gambling_promotion", "get_rich_quick", "miracle_cure", "shopping_pressure", "engagement_bait", "artificial_urgency", "conspiracy_framing", "spoilers", "financial_price_predictions", "crypto_nft_promotion", "reaction_content", "harassment_pranks", "giveaways_contests", "sponsorships_sales_pitches", "rankings_listicles"];
 
 test("catalog preserves categories, explicit empty selections and stable order", () => {
-  assert.deepEqual(Array.from(classifiers.ids), [...expected, "wide_open_mouth"]);
+  assert.deepEqual(Array.from(classifiers.ids), [...expected, "wide_open_mouth", "brush_lettering_only", "brush_background_only"]);
   assert.deepEqual(Array.from(classifiers.normalize(undefined)), expected);
   assert.deepEqual(Array.from(classifiers.normalize([])), []);
   assert.deepEqual(Array.from(classifiers.normalize(["rage_bait", "unknown", "clickbait", "rage_bait"])), ["clickbait", "rage_bait"]);

@@ -14,10 +14,10 @@
 
   function requestBody(title, enabled = classifiers.titleIds, imageData = null, detail = "high") {
     const requested = classifiers.normalize(enabled);
-    if (requested.includes(classifiers.imageId) && !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(imageData || "")) {
-      throw new ClassificationError("thumbnail", "A supported thumbnail image is required for the wide-open mouth check.", Date.now() + 60000);
+    const withImage = requested.some(classifiers.isImage);
+    if (withImage && !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(imageData || "")) {
+      throw new ClassificationError("thumbnail", "A supported thumbnail image is required for the selected image checks.", Date.now() + 60000);
     }
-    const withImage = requested.includes(classifiers.imageId);
     return {
       model: MODEL,
       input: withImage ? [{ role: "user", content: [

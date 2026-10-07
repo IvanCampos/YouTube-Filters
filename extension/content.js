@@ -9,10 +9,11 @@
     const skipped = value?.skippedIds || [];
     if ((value?.expires && value.expires <= Date.now()) || !classifiers.validResult(value, ids) ||
         !Array.isArray(ids) || JSON.stringify(ids) !== JSON.stringify(classifiers.normalize(ids)) ||
+        !Array.isArray(skipped) || JSON.stringify(skipped) !== JSON.stringify(classifiers.normalize(skipped)) ||
         JSON.stringify(classifiers.normalize([...ids, ...skipped])) !== JSON.stringify(classifiers.normalize(requested))) return false;
     if (!skipped.length) return ids.length === requested.length;
-    return settings.hideEarlyExit && settings.replacementStyle === "hide" && skipped.length === 1 && skipped[0] === classifiers.imageId &&
-      !ids.includes(classifiers.imageId) && Boolean(classifiers.strongest(value, ids, settings.minProbability));
+    return settings.hideEarlyExit && settings.replacementStyle === "hide" && skipped.every(classifiers.isImage) &&
+      ids.every(id => !classifiers.isImage(id)) && Boolean(classifiers.strongest(value, ids, settings.minProbability));
   }
   const strongest = value => validResult(value) ? classifiers.strongest(value, value?.evaluatedIds || value?.ids || settings.enabledClassifiers, settings.minProbability) : null;
   const LOCKUP_IMAGE = ".ytLockupViewModelContentImage, .yt-lockup-view-model__content-image";
@@ -201,7 +202,7 @@
   }
 
   function thumbnailFor(element) {
-    return settings.enabledClassifiers.includes(classifiers.imageId) ? globalThis.ThumbnailImages.forElement(element) : null;
+    return settings.enabledClassifiers.some(classifiers.isImage) ? globalThis.ThumbnailImages.forElement(element) : null;
   }
   function evaluationKey(element, title) {
     const url = thumbnailFor(element);
@@ -210,7 +211,7 @@
   function aiLabel(element, title) {
     if (!aiActive() || !title || title.length > 1000) return null;
     const thumbnailUrl = thumbnailFor(element);
-    const ids = settings.enabledClassifiers.filter(id => id !== classifiers.imageId || thumbnailUrl);
+    const ids = settings.enabledClassifiers.filter(id => !classifiers.isImage(id) || thumbnailUrl);
     if (!ids.length) return null;
     const key = evaluationKey(element, title);
     const cached = classifications.get(key);

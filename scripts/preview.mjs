@@ -47,7 +47,7 @@ window.chrome = { runtime: {sendMessage: async message => {
   const simulatedCategory = new URL(location.href).searchParams.get("classifier");
   const label = message.title.includes("Sponsored") ? (ThumbnailClassifiers.ids.includes(simulatedCategory) ? simulatedCategory : "sponsorships_sales_pitches") : message.title.includes("wealth") ? 'get_rich_quick' : message.title.includes("believe") ? 'clickbait' : message.title.includes("fear") ? 'fear_mongering' : null;
   return {ok:true,aiRevision:String(revision),schemaVersion:ThumbnailClassifiers.schemaVersion,
-    results:Object.fromEntries(ThumbnailClassifiers.normalize(values.enabledClassifiers).filter(id => id !== ThumbnailClassifiers.imageId || message.thumbnailUrl).map(id => [id,{
+    results:Object.fromEntries(ThumbnailClassifiers.normalize(values.enabledClassifiers).filter(id => !ThumbnailClassifiers.isImage(id) || message.thumbnailUrl).map(id => [id,{
       probability:id===label?.925:.02
     }]))};
 }}, storage: {

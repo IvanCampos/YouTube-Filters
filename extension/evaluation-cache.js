@@ -8,7 +8,7 @@
     .map(byte => byte.toString(16).padStart(2, "0")).join("");
   const hash = text => digest(new TextEncoder().encode(text));
   const validKey = key => typeof key === "string" && /^[a-f0-9]{64}$/.test(key);
-  const ttl = id => id === catalog.imageId ? IMAGE_TTL : TTL;
+  const ttl = id => catalog.isImage(id) ? IMAGE_TTL : TTL;
   const validScore = (id, score) => score && Object.keys(score).every(key => ["probability", "expires"].includes(key)) && catalog.validResult({ schemaVersion: catalog.schemaVersion, results: { [id]: score } }, [id]);
   const touch = (map, key, value) => { map.delete(key); map.set(key, value); };
   class EvaluationCache {
@@ -58,7 +58,7 @@
         while (map.size > LIMIT) map.delete(map.keys().next().value);
       }
       for (const image of [false, true]) {
-        const keys = [...this.entries].filter(([, scores]) => Object.hasOwn(scores, catalog.imageId) === image).map(([key]) => key);
+        const keys = [...this.entries].filter(([, scores]) => Object.keys(scores).some(catalog.isImage) === image).map(([key]) => key);
         for (const key of keys.slice(0, Math.max(0, keys.length - LIMIT))) this.entries.delete(key);
       }
       // JSON is also the persisted representation. Everything here is ASCII;

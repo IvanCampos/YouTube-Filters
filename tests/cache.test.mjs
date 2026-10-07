@@ -96,13 +96,14 @@ test("serialized writes cannot restore scores after credential clearing", async 
 test('title and image TTLs differ, URL aliases expire hourly, and pixels are never stored', async () => {
   const f = fixture(); await f.cache.initialize('key');
   const title = await f.hash('title'), image = await f.hash('pixels'), url = await f.hash('url');
+  const images = ['wide_open_mouth', 'brush_lettering_only', 'brush_background_only'];
   f.cache.merge(title, result(['clickbait']), ['clickbait']);
-  f.cache.merge(image, result(['wide_open_mouth']), ['wide_open_mouth']);
-  const titleExpiry = f.cache.read(title, ['clickbait']).expires, imageExpiry = f.cache.read(image, ['wide_open_mouth']).expires;
-  assert.equal(titleExpiry - imageExpiry, 23 * 86400000);
+  f.cache.merge(image, result(images), images);
+  const titleExpiry = f.cache.read(title, ['clickbait']).expires;
+  for (const id of images) assert.equal(titleExpiry - f.cache.read(image, [id]).expires, 23 * 86400000);
   f.cache.setAlias(url, image); assert.equal(f.cache.alias(url).key, image);
   f.advance(3600001); assert.equal(f.cache.alias(url), null);
-  f.advance(7 * 86400000); assert.equal(f.cache.read(image, ['wide_open_mouth']).missing.length, 1);
+  f.advance(7 * 86400000); assert.deepEqual(Array.from(f.cache.read(image, images).missing), images);
   assert.equal(f.cache.read(title, ['clickbait']).missing.length, 0);
 });
 
@@ -118,7 +119,8 @@ test('separate 5000-entry capacities and a combined four-MiB budget include meta
   const f = fixture(); await f.cache.initialize('key');
   for (let i = 0; i < 5000; i++) {
     f.cache.merge(i.toString(16).padStart(64, '0'), result(['clickbait']), ['clickbait']);
-    f.cache.merge((i + 5000).toString(16).padStart(64, '0'), result(['wide_open_mouth']), ['wide_open_mouth']);
+    const imageId = i % 2 ? 'brush_background_only' : 'wide_open_mouth';
+    f.cache.merge((i + 5000).toString(16).padStart(64, '0'), result([imageId]), [imageId]);
   }
   await f.cache.persist(); assert.equal(f.data.evaluationCache.entries.length, 10000);
   for (let i = 0; i < 5000; i++) f.cache.merge(i.toString(16).padStart(64, '0'), result(Array.from(catalogIds())), Array.from(catalogIds()));
