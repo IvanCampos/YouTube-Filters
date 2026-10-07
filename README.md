@@ -19,6 +19,8 @@ Make your YouTube feed easier to browse. Hide videos with words you don't want t
 5. Select **Load unpacked**, then choose the **extension** folder inside the extracted project.
 6. Refresh your YouTube tabs. Open Chrome's puzzle-piece menu and pin **YouTube Thumbnail Filters — Decisions** for easy access.
 
+https://github.com/user-attachments/assets/5c368e58-db4d-4989-8311-d91d1d503b89
+
 ## Start with keyword filters
 
 Keyword filters work without an OpenAI account or paid AI requests.
