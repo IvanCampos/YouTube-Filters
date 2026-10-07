@@ -53,6 +53,8 @@ To filter brush-styled thumbnails, choose **AI Brushed Images** or select its ca
 
 With both selected, either category reaching your minimum match probability counts as a hit. Brush-textured letters can qualify even when a brush banner is also present. These options start unselected and classify visible styling without determining whether AI created the image. Choose **Hide entire video** or a thumbnail effect, then **Save all settings**.
 
+<img width="397" height="586" alt="Screenshot 2026-10-06 at 10 07 09 PM" src="https://github.com/user-attachments/assets/d46db727-4b2d-4ed8-8e7b-7ca8d3d96efc" />
+
 After updating the extension's classifier rubrics, reload the extension at `chrome://extensions` and refresh YouTube tabs. The changed category's cached scores are discarded on worker restart; other categories keep their compatible cached scores.
 
 **Minimum match probability** controls how strong an AI match must be before filtering. Start with the default **90%**; lowering it filters more videos. It does not affect keyword filters.
