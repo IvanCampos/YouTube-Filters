@@ -1,3 +1,8 @@
+# Dependencies restored by npm ci.
 node_modules/
+
+# Generated extension bundles recreated by npm run build.
 dist/
+
+# macOS Finder metadata.
 .DS_Store
